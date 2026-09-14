@@ -47,5 +47,5 @@
 ## PHASE 6 — SHIP
 [ ] demos/*.gh                      [MANUAL] user-owned — rebuild against the current build (Request Aggregator replaces Arrange Content)
 [ ] Live re-verification of the current build   [MANUAL] ← [HUMAN GATE 6] header/footer content, nested bullets, image list, table fills, style-reset `fields:"*"`
-[ ] /rest-package                   [CODE] .yak for net48 / net7.0-windows / net7.0 + publish workflow
-[ ] GitHub publish                  [MANUAL] ← [HUMAN GATE 7]
+[x] /rest-package                   [CODE] .yak for net48 / net7.0-windows / net7.0 + publish workflow — dist/ built 2026-09-13
+[x] GitHub publish                  [MANUAL] ← [HUMAN GATE 7] repo live 2026-09-13; Food4Rhino listing published 2026-09-13 (zips of .gha + dlls); yak push not yet done

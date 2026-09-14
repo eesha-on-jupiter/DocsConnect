@@ -1,0 +1,31 @@
+name: Build DocsConnect
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # SDK 8 builds net48, net7.0-windows, net7.0 AND the net8.0 test project.
+          dotnet-version: '8.x'
+
+      - name: Restore
+        run: |
+          dotnet restore DocsConnect.csproj
+          dotnet restore DocsConnect.Tests/DocsConnect.Tests.csproj
+
+      - name: Build (all targets)
+        run: dotnet build DocsConnect.csproj -c Release --no-restore
+
+      - name: Test (builder tests, net8.0)
+        run: dotnet test DocsConnect.Tests/DocsConnect.Tests.csproj -c Release --no-restore

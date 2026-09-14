@@ -35,6 +35,8 @@ Component chains for each of these are in [docs/workflows.md](docs/workflows.md)
 **Food4Rhino:** (pending first release)
 **Yak:** `_PackageManager` → search `docsconnect` (pending first release)
 
+**Rhino 8 note:** the Rhino 8 packages are built for .NET 7 and load only when Rhino runs on the .NET Core runtime (its default). If the DocsConnect tab is missing, run `SetDotNetRuntime` in Rhino, choose **.NET Core**, and restart — Rhino.Inside Revit setups often switch this to .NET Framework.
+
 **From source:** `dotnet build DocsConnect.csproj`, then drop the `.gha` for your Rhino version into Grasshopper's `Libraries` folder (Rhino 7: `bin/Debug/net48`; Rhino 8 Windows: `bin/Debug/net7.0-windows`; Rhino 8 Mac: `bin/Debug/net7.0`) and restart Rhino — or point Grasshopper's developer-folder setting at the build folder. Close Rhino before rebuilding; it locks the `.gha`.
 <!-- pr:end install -->
 

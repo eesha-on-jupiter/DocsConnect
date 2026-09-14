@@ -14,7 +14,7 @@
     <Version>1.0.0</Version>
     <Title>DocsConnect</Title>
     <Company>DocsConnect Authors</Company>
-    <Description>Grasshopper components for the Google Docs API — create, read, and batch-update Google Docs from Rhino/Grasshopper.</Description>
+    <Description>Grasshopper components for the Google Docs API — create, read, and batch-update Google Docs from Rhino/Grasshopper. Made with the PleaseREST Claude Code plugin.</Description>
   </PropertyGroup>
 
   <!-- Test project lives in a subfolder; keep it out of the main plugin build -->
@@ -22,6 +22,20 @@
     <Compile Remove="DocsConnect.Tests\**\*.cs" />
     <EmbeddedResource Remove="DocsConnect.Tests\**" />
     <None Remove="DocsConnect.Tests\**" />
+  </ItemGroup>
+
+  <!-- Yak packaging: Release output holds only what ships (no .pdb / deps.json / runtimeconfig.json) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+  </PropertyGroup>
+
+  <!-- Yak packaging: manifest + logo copied next to the .gha so `yak build` finds them -->
+  <ItemGroup>
+    <None Include="manifest.yml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Icons\GDC_DocsConnectLogo.png" Link="DocsConnectLogo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

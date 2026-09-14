@@ -7,9 +7,9 @@
   "token_env_var": "PLEASE_REST_TOKEN",
   "findings_path": "dogfood/DocsConnect-run-01.md",
   "started": "2026-06-21T12:24:00",
-  "last_active": "2026-09-13T17:40:25",
+  "last_active": "2026-09-13T20:21:39",
   "please_rest_version": "2.6.0",
-  "current_phase": 14,
+  "current_phase": 15,
   "current_phase_name": "GitHub / packaging (code, tests and docs complete; demos + live Gate 6 + yak + publish pending)",
   "completed_phases": [
     1,
@@ -37,7 +37,7 @@
     6,
     7
   ],
-  "last_completed_step": "Extend round 3 (2026-09-13), version stays 1.0.0 until the first GitHub release. Placement rework driven by live canvas testing, logged F25-F36. Request Aggregator absorbed Arrange Content (deleted): one wire = one block, merged lists split where an insert restarts at 1, Start Index 1 = top of the addressed index space (0 for segments), Fixed Requests pass-through, mixed index spaces refused, content inserts in Fixed Requests refused, per-insert style reset (Normal text / bullets removed / updateTextStyle fields:*). Growth constants from the API reference in one place: page/section break 2, image 1, table structure, bullets minus stripped tabs, CRLF normalised. Segment content starts at 0 (Create Header/Footer at 0, Footnote at 1). Composites output lists so Merge keeps slot order; every request component warns on re-solve; Batch Update warns on >1 insert at a segment start. Bullet Preset validated. Tables: a row's request items expand to one cell per formatted line; format trees Bold/Italic/Underline/Font Size/Font Family/Text Color/Fill (updateTableCellStyle); Fixed Size Table flat-branch row-major; Data Tree To Table Transpose. Formatted Table added then removed at user request. Image chain list-native: Capture Rhino View takes view lists (distinct auto-names), Get Image URL lists, Insert Image Own Paragraph. 153 unit tests incl. PlacementSweepTests over every content-emitting builder. docs/ + changelog, README.md, CLAUDE.md, LICENSE, .gitignore written; spec/todo.md regenerated.",
+  "last_completed_step": "dist/*.yak — manifest.yml + csproj copy items + Release stripping (no pdb/deps/runtimeconfig), three packages built and validated (rh7_0-any, rh8_0-win, rh8_0-mac), .github/workflows/publish.yml generated. GitHub repo eesha-on-jupiter/DocsConnect created and initial commit pushed 2026-09-13.",
   "next_step": "User rebuilds demos/*.gh against the current build (user-owned, not to be touched by the pipeline). Then GATE 6 live re-verification of the current build: header/footer content at segment index 0, nested Bullet List followed by another block, image list one per line, table Fill and the fields:'*' style reset (both built to the reference, not yet exercised live). Then /rest-package for .yak on all three targets and GitHub publish (GATE 7).",
   "mcp_test": {
     "driver": "cordyceps bridge, Rhino 8 Core 8",
@@ -125,5 +125,6 @@
     "auth_gate_passed": true,
     "first_component_approved": true,
     "permissions_confirmed": true
-  }
+  },
+  "github_org": "eesha-on-jupiter"
 }

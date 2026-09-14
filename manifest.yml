@@ -1,0 +1,13 @@
+name: docsconnect
+version: 1.0.0
+authors:
+  - Eesha Jain
+description: "Grasshopper components for the Google Docs API — create, read, and batch-update Google Docs from Rhino/Grasshopper. Made with the PleaseREST Claude Code plugin."
+url: https://github.com/eesha-on-jupiter/DocsConnect
+keywords:
+  - grasshopper
+  - rhino
+  - google-docs
+  - rest
+  - api
+icon: DocsConnectLogo.png

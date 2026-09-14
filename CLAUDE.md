@@ -15,10 +15,11 @@ Generated Grasshopper REST plugin built with the **PleaseREST** pipeline (`pleas
 ## Current build state
 
 - **Version:** 1.0.0 — pre-release; version tracking starts with the first GitHub release
-- **Phase:** 14 — GitHub / packaging. Code, unit tests (153) and `docs/` are complete.
-- **Last completed step:** Placement rework — Request Aggregator absorbed Arrange Content (deleted); block splitting for merged lists; per-insert style isolation; segment start at 0; break/tab/CRLF growth fixes; unplaced-block detection; per-cell table formatting trees + Transpose; list-native image chain; placement sweep tests across every content-emitting builder.
-- **Next step:** demo `.gh` files (user-owned — do not touch `demos/`), Gate 6 live re-verification of the current build, `/rest-package` for `.yak`, GitHub publish.
-- **Last active:** 2026-09-13T17:38:54
+- **Phase:** 15 — Package + Ship. Code, unit tests (153), `docs/`, `.yak` packages and CI workflow are complete; repo is live at https://github.com/eesha-on-jupiter/DocsConnect.
+- **Last completed step:** `/rest-package` — `manifest.yml`, csproj copy items + Release stripping, three validated `.yak` files in `dist/`, `.github/workflows/publish.yml` (tag `v*.*.*` → Release with packages). Before that: placement rework — Request Aggregator absorbed Arrange Content (deleted); block splitting for merged lists; per-insert style isolation; segment start at 0; break/tab/CRLF growth fixes; unplaced-block detection; per-cell table formatting trees + Transpose; list-native image chain; placement sweep tests across every content-emitting builder.
+- **Shipped:** Food4Rhino listing published 2026-09-13 with `dist/DocsConnect-1.0.0-{rh7-win,rh8-win,rh8-mac}.zip` (`.gha` + DLLs + INSTALL.txt; Mac untested). Rhino 8 Windows package install-tested locally (needs .NET Core runtime).
+- **Next step:** tag `v1.0.0` for the GitHub Release; optional `yak login` + `yak push` for `_PackageManager`; Gate 6 live re-verification; Mac test. Demo `.gh` files are user-owned (`demos/` is gitignored for now).
+- **Last active:** 2026-09-13T20:30:00
 <!-- pr:end state -->
 
 <!-- pr:begin platform -->
