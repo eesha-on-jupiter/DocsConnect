@@ -1,0 +1,2348 @@
+{
+  "plugin_name": "DocsConnect",
+  "platform": "Google Docs API",
+  "base_url": "https://docs.googleapis.com",
+  "auth_method": "OAuth 2.0 (Bearer token)",
+  "api_version": "v1",
+  "tab_name": "DocsConnect",
+  "oauth_scopes": [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file"
+  ],
+  "deferred_v2": [
+    "Drive API markdown bridge (CreateDocFromMarkdown / ExportDocAsMarkdown) — base www.googleapis.com, scopes already cover it",
+    "Remaining batchUpdate niceties only if needed"
+  ],
+  "design_note_index_free_rework": "Text and Paragraph components no longer take document indices. Every one authors its request(s) at a placeholder index (1) and outputs a list. Real placement happens only in ArrangeContentComponent (renamed from AppendCursorComponent, now in the Combine tab), which is now the mandatory hub every block passes through before RequestAggregatorComponent. Insert / Structure tabs are unchanged and still take raw indices — they reference either fresh placeholder positions or genuinely pre-existing document structure (named ranges) that can't be stacked the same way.",
+  "design_note_table_tab_rework": "The Table tab's original 5 components (InsertTableRow/InsertTableColumn/DeleteTableRow/DeleteTableColumn/MergeTableCells) were removed entirely per user decision: editing an existing table's rows/columns/cells requires live structural indices pulled from a fetched document, which isn't a realistic thing to hand-author in a Grasshopper workflow. TableRequestBuilders.cs (their only builder) was deleted as dead code. Data Tree To Table and Fixed Size Table moved here from the removed Report Tools tab, since building a table FROM data is the realistic table-authoring pattern. The Report Tools tab itself was dissolved — its remaining components redistributed to the tabs they align with: Report Skeleton / Report Header Block / Bullet List went to Paragraph (they're paragraph-style composites), and Arrange Content went to Combine (it feeds directly into Request Aggregator).",
+  "design_note_segment_content": "Google Docs gives headers/footers/footnotes their own separate index space (a 'segment') — inserting text into one needs location.segmentId (the ID returned by the createHeader/createFooter/createFootnote reply), not a body index. The ONLY part that genuinely needs a live API round-trip is obtaining that ID — it's server-generated and unknowable before the create request executes. Everything after that is a plain request object like any other. So: Create Header / Create Footer / Create Footnote are live write components (Document tab) that create the segment AND take an optional Text input — if filled, they immediately insert that plain text into the segment as a one-step convenience (create, read back the ID, insertText, all in the same component); if left blank, they just create the empty segment. Either way they return the Header ID / Footer ID / Footnote ID, so richer content (bold, multiple lines, alignment, mixed styling) can still be layered in afterward: every Text-tab and Paragraph-tab component has an optional 'Segment ID' input (blank = body) — wiring the returned ID into it targets that segment with the exact same self-indexed-from-1 model already used for body content. Multiple blocks going into the same segment still need Arrange Content to sequence them — just a SEPARATE Arrange Content instance per segment (body vs. each header/footer/footnote), since their index spaces are independent and mixing them in one Arrange Content run would cross-contaminate the content-length tally. 'Header Type'/'Footer Type' is dropped as a user input entirely: Google's HeaderFooterType enum only supports \"DEFAULT\" for creation (odd/even/first-page headers are controlled separately via document style flags, not this field), so it's hardcoded rather than exposed. SharedBuilders.Location/Range gain an optional segmentId parameter (default null = body); every existing call site is unaffected since it passes null.",
+  "subcategories": [
+    {
+      "name": "Connect",
+      "type": "http",
+      "components": [
+        {
+          "class_name": "DocsConnectAuthComponent",
+          "file_name": "DocsConnectAuth.cs",
+          "type": "component",
+          "role": "write",
+          "endpoint_id": "auth_check",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Document",
+      "type": "http",
+      "components": [
+        {
+          "class_name": "GetDocumentComponent",
+          "file_name": "GetDocument.cs",
+          "type": "component",
+          "role": "write",
+          "endpoint_id": "get_document",
+          "also_uses_endpoint": "find_documents_by_name",
+          "note": "Fetches by Document ID, or resolves a Name to an ID via the Drive API (files.list) then fetches. Name lookup needs a Drive-scoped token (drive.readonly / drive.metadata.readonly); drive.file only sees app-created files.",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Name",
+              "nickname": "N",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Title",
+              "nickname": "TI",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "note": "The ID actually used (resolved from Name when looked up); chains into Batch Update / Clear Document / Create Header / Create Footer / Create Footnote."
+            }
+          ]
+        },
+        {
+          "class_name": "CreateDocumentComponent",
+          "file_name": "CreateDocument.cs",
+          "type": "component",
+          "role": "write",
+          "endpoint_id": "create_document",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Title",
+              "nickname": "TI",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "BatchUpdateDocumentComponent",
+          "file_name": "BatchUpdateDocument.cs",
+          "type": "component",
+          "role": "write",
+          "endpoint_id": "batch_update_document",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Requests JSON",
+              "nickname": "RQ",
+              "type": "string",
+              "access": "list",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "ClearDocumentComponent",
+          "file_name": "ClearDocument.cs",
+          "type": "component",
+          "role": "write",
+          "note": "Composes get_document + batch_update_document internally (does not consume the Requests JSON payload contract — same precedent as CreateDocument/GetDocument). Full-document clear only, no partial range. Fetches the doc's real body end index via get_document, then issues one deleteContentRange(1, bodyEnd-1) — index 1 can't be deleted (implicit trailing newline).",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "CreateHeaderJsonComponent",
+          "file_name": "CreateHeaderJson.cs",
+          "type": "component",
+          "role": "write",
+          "display_name": "Create Header",
+          "note": "MOVED from Structure + EDITED (revised again — see design_note_segment_content). Live write: (1) batchUpdate createHeader (type hardcoded DEFAULT — 'Header Type' dropped as a user input), parse the returned Header ID; (2) if Text is non-blank, batchUpdate insertText of Text into that segment in the same step — a one-component convenience for the simple case. Text left blank just creates the empty segment; either way, Header ID is returned so richer content (bold, multiple lines, alignment) can be layered in afterward via any Text/Paragraph-tab component's Segment ID input. Does not consume the Requests JSON payload contract for its own create call (same precedent as Clear Document) — but content added later via Segment ID does flow through the normal contract.",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Header ID",
+              "nickname": "HID",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "CreateFooterJsonComponent",
+          "file_name": "CreateFooterJson.cs",
+          "type": "component",
+          "role": "write",
+          "display_name": "Create Footer",
+          "note": "MOVED from Structure + EDITED, same pattern as Create Header. Live write: creates the DEFAULT footer segment; if Text is non-blank, also inserts it into the segment in the same step. Text left blank just creates the empty segment. Footer ID is always returned for layering richer content afterward via any Text/Paragraph-tab component's Segment ID input.",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Footer ID",
+              "nickname": "FID",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "CreateFootnoteJsonComponent",
+          "file_name": "CreateFootnoteJson.cs",
+          "type": "component",
+          "role": "write",
+          "display_name": "Create Footnote",
+          "note": "MOVED from Structure + EDITED, same pattern. Index is kept (unlike Text/Paragraph tabs) because it anchors the footnote marker to a specific point in the main body — a body-position reference, not a stackable content block, consistent with other Structure-tab components like Create Named Range. Creates the footnote reference via batchUpdate createFootnote at Index; if Text is non-blank, also inserts it into the footnote's segment in the same step. Footnote ID is always returned for layering richer content afterward via Segment ID.",
+          "inputs": [
+            {
+              "name": "Token",
+              "nickname": "T",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Document ID",
+              "nickname": "DID",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Status",
+              "nickname": "S",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Response",
+              "nickname": "R",
+              "type": "string",
+              "access": "item"
+            },
+            {
+              "name": "Footnote ID",
+              "nickname": "FNID",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Text",
+      "type": "json",
+      "note": "Every component below (except Replace All Text, which is never segment-scoped — see its note) gains an optional 'Segment ID' input, blank by default (= body). Wire a Header ID / Footer ID / Footnote ID into it to target that segment instead of the body — same self-indexed-from-1 model either way.",
+      "components": [
+        {
+          "class_name": "InsertTextJsonComponent",
+          "file_name": "InsertTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "EDITED. Index input removed — always authored at placeholder index 1 within whichever segment it targets. Stack through Arrange Content to get a real position (one Arrange Content instance per segment).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "ReplaceAllTextJsonComponent",
+          "file_name": "ReplaceAllTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "UNCHANGED — never took an index, and no Segment ID either: ReplaceAllTextRequest matches across the whole document (all segments) by design, it has no location/segmentId field to scope it to one segment.",
+          "inputs": [
+            {
+              "name": "Find",
+              "nickname": "FT",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Replace",
+              "nickname": "RT",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Match Case",
+              "nickname": "MC",
+              "type": "bool",
+              "access": "item",
+              "default": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "UpdateTextStyleJsonComponent",
+          "file_name": "UpdateTextStyleJson.cs",
+          "type": "component",
+          "role": "unit",
+          "display_name": "Styled Text",
+          "note": "EDITED (was range-based Update Text Style). Now self-contained: Text in, insertText+updateTextStyle out. No index. Use this when combining multiple style traits on the same text; the atomic Bold/Italic/etc. components below insert a separate copy of the text each, so they should not be wired to the same text if multiple traits are wanted.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Bold",
+              "nickname": "B",
+              "type": "bool",
+              "access": "item",
+              "default": false,
+              "optional": true
+            },
+            {
+              "name": "Italic",
+              "nickname": "I",
+              "type": "bool",
+              "access": "item",
+              "default": false,
+              "optional": true
+            },
+            {
+              "name": "Underline",
+              "nickname": "U",
+              "type": "bool",
+              "access": "item",
+              "default": false,
+              "optional": true
+            },
+            {
+              "name": "Strikethrough",
+              "nickname": "SK",
+              "type": "bool",
+              "access": "item",
+              "default": false,
+              "optional": true
+            },
+            {
+              "name": "Font Size",
+              "nickname": "FS",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Font Family",
+              "nickname": "FF",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Text Color",
+              "nickname": "FC",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Highlight",
+              "nickname": "HC",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Link URL",
+              "nickname": "LK",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Baseline",
+              "nickname": "BL",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "BoldTextJsonComponent",
+          "file_name": "BoldTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(bold) in one block.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "ItalicTextJsonComponent",
+          "file_name": "ItalicTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(italic).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "UnderlineTextJsonComponent",
+          "file_name": "UnderlineTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(underline).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "StrikethroughTextJsonComponent",
+          "file_name": "StrikethroughTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(strikethrough).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "FontSizeTextJsonComponent",
+          "file_name": "FontSizeTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(fontSize).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Font Size",
+              "nickname": "FS",
+              "type": "double",
+              "access": "item",
+              "default": 12.0
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "FontFamilyTextJsonComponent",
+          "file_name": "FontFamilyTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(fontFamily). Font Family fed by FontFamilyPreset (curated shortcuts) or any free-text string.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Font Family",
+              "nickname": "FF",
+              "type": "string",
+              "access": "item",
+              "default": "Arial"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "TextColorTextJsonComponent",
+          "file_name": "TextColorTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(foregroundColor).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Color",
+              "nickname": "FC",
+              "type": "string",
+              "access": "item",
+              "default": "#000000"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "HighlightTextJsonComponent",
+          "file_name": "HighlightTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(backgroundColor).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Highlight",
+              "nickname": "HC",
+              "type": "string",
+              "access": "item",
+              "default": "#FFFF00"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "LinkTextJsonComponent",
+          "file_name": "LinkTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(link).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "URL",
+              "nickname": "LK",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "BaselineTextJsonComponent",
+          "file_name": "BaselineTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateTextStyle(baselineOffset).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Baseline",
+              "nickname": "BL",
+              "type": "string",
+              "access": "item",
+              "default": "SUPERSCRIPT"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "type": "json",
+      "note": "Every component below gains an optional 'Segment ID' input, same as the Text tab — blank by default (= body), or wire in a Header ID / Footer ID / Footnote ID to target that segment.",
+      "components": [
+        {
+          "class_name": "UpdateParagraphStyleJsonComponent",
+          "file_name": "UpdateParagraphStyleJson.cs",
+          "type": "component",
+          "role": "unit",
+          "display_name": "Styled Paragraph",
+          "note": "EDITED (was range-based Update Paragraph Style). Now self-contained: Text in, insertText+updateParagraphStyle out. No index. Use this for combining multiple paragraph traits on the same text; the atomic components below insert a separate copy of the text each.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Named Style",
+              "nickname": "NS",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Alignment",
+              "nickname": "AL",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Line Spacing",
+              "nickname": "LS",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Indent",
+              "nickname": "IN",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Space Above",
+              "nickname": "SA",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Space Below",
+              "nickname": "SB",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "HeadingTextJsonComponent",
+          "file_name": "HeadingTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(namedStyleType). Named Style fed by NamedStyleTypePreset.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Named Style",
+              "nickname": "NS",
+              "type": "string",
+              "access": "item",
+              "default": "HEADING_1"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "AlignedTextJsonComponent",
+          "file_name": "AlignedTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(alignment). Alignment fed by AlignmentPreset. Common use: right-align text in a footer.",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Alignment",
+              "nickname": "AL",
+              "type": "string",
+              "access": "item",
+              "default": "START"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "LineSpacingTextJsonComponent",
+          "file_name": "LineSpacingTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(lineSpacing).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Line Spacing",
+              "nickname": "LS",
+              "type": "double",
+              "access": "item",
+              "default": 100.0
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "IndentTextJsonComponent",
+          "file_name": "IndentTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(indentStart).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Indent",
+              "nickname": "IN",
+              "type": "double",
+              "access": "item",
+              "default": 18.0
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "SpaceAboveTextJsonComponent",
+          "file_name": "SpaceAboveTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(spaceAbove).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Space Above",
+              "nickname": "SA",
+              "type": "double",
+              "access": "item",
+              "default": 0.0
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "SpaceBelowTextJsonComponent",
+          "file_name": "SpaceBelowTextJson.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "Atomic single-trait component: insertText + updateParagraphStyle(spaceBelow).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Space Below",
+              "nickname": "SB",
+              "type": "double",
+              "access": "item",
+              "default": 0.0
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "CreateParagraphBulletsJsonComponent",
+          "file_name": "CreateParagraphBulletsJson.cs",
+          "type": "component",
+          "role": "unit",
+          "display_name": "Bullet Item Text",
+          "note": "EDITED (was range-based Create Paragraph Bullets). Now self-contained single bulleted line: Text in, insertText+createParagraphBullets out. No index. For a multi-item list in one block, use BulletListComponent instead (same tab).",
+          "inputs": [
+            {
+              "name": "Text",
+              "nickname": "TX",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Bullet Preset",
+              "nickname": "BP",
+              "type": "string",
+              "access": "item",
+              "default": "BULLET_DISC_CIRCLE_SQUARE"
+            },
+            {
+              "name": "Segment ID",
+              "nickname": "SEG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "ReportSkeletonComponent",
+          "file_name": "ReportSkeleton.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "MOVED from Report Tools (tab removed). Composite: title + per-section styled heading + body paragraphs; self-indexed from 1 across the whole sequence. Uses NamedStyleType values.",
+          "inputs": [
+            {
+              "name": "Title",
+              "nickname": "TI",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Headings",
+              "nickname": "HD",
+              "type": "string",
+              "access": "list",
+              "default": ""
+            },
+            {
+              "name": "Heading Levels",
+              "nickname": "HL",
+              "type": "int",
+              "access": "list",
+              "default": 1
+            },
+            {
+              "name": "Bodies",
+              "nickname": "BD",
+              "type": "string",
+              "access": "list",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "ReportHeaderBlockComponent",
+          "file_name": "ReportHeaderBlock.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "MOVED from Report Tools (tab removed). Composite: standard project title block (name TITLE-styled + Project No./Date/Author/Revision as lines), self-indexed from 1. Date defaults to today if blank. Unrelated to page header/footer segments (Document tab) despite the similar name — this builds a title block inside the main body.",
+          "inputs": [
+            {
+              "name": "Project Name",
+              "nickname": "PN",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Project Number",
+              "nickname": "PO",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Date",
+              "nickname": "DT",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Author",
+              "nickname": "AU",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Revision",
+              "nickname": "RV",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Layout",
+              "nickname": "LY",
+              "type": "string",
+              "access": "item",
+              "default": "lines"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "BulletListComponent",
+          "file_name": "BulletList.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "MOVED from Report Tools (tab removed). Composite: list of strings (+ optional indent levels), self-indexed from 1. Multi-item — for a single bulleted line, use Bullet Item Text instead. Uses BulletGlyph values incl. BULLET_CHECKBOX.",
+          "inputs": [
+            {
+              "name": "Items",
+              "nickname": "IT",
+              "type": "string",
+              "access": "list",
+              "default": ""
+            },
+            {
+              "name": "Indent Levels",
+              "nickname": "IL",
+              "type": "int",
+              "access": "list",
+              "default": 0,
+              "optional": true
+            },
+            {
+              "name": "Bullet Preset",
+              "nickname": "BP",
+              "type": "string",
+              "access": "item",
+              "default": "BULLET_DISC_CIRCLE_SQUARE"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert",
+      "type": "json",
+      "components": [
+        {
+          "class_name": "InsertInlineImageJsonComponent",
+          "file_name": "InsertInlineImageJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Image URL",
+              "nickname": "IU",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Width",
+              "nickname": "W",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Height",
+              "nickname": "H",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "ReplaceImageJsonComponent",
+          "file_name": "ReplaceImageJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Image Object ID",
+              "nickname": "IO",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Image URL",
+              "nickname": "IU",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "InsertTableJsonComponent",
+          "file_name": "InsertTableJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Rows",
+              "nickname": "RO",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Columns",
+              "nickname": "CO",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "InsertPageBreakJsonComponent",
+          "file_name": "InsertPageBreakJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "InsertSectionBreakJsonComponent",
+          "file_name": "InsertSectionBreakJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Section Type",
+              "nickname": "SE",
+              "type": "string",
+              "access": "item",
+              "default": "NEXT_PAGE"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Table",
+      "type": "json",
+      "note": "REWORKED. The 5 low-level row/column/merge editors (InsertTableRow/InsertTableColumn/DeleteTableRow/DeleteTableColumn/MergeTableCells) were removed entirely per user decision — they require live table-structure indices from a fetched document, which isn't a realistic GH-workflow authoring pattern. TableRequestBuilders.cs (their sole builder) was deleted as dead code. The tab now holds the two components that actually build a table from data, moved here from the removed Report Tools tab.",
+      "components": [
+        {
+          "class_name": "DataTreeToTableComponent",
+          "file_name": "DataTreeToTable.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "MOVED from Report Tools (tab removed). Composite: one InsertTable + index-sequenced cell InsertText requests, self-indexed from 1; optional bold header row. Table shape is inferred from the tree (branch count = rows, items per branch = columns). For explicit Rows/Columns control, use Fixed Size Table instead.",
+          "inputs": [
+            {
+              "name": "Data",
+              "nickname": "D",
+              "type": "string",
+              "access": "tree",
+              "default": ""
+            },
+            {
+              "name": "Header Row",
+              "nickname": "HR",
+              "type": "bool",
+              "access": "item",
+              "default": true
+            },
+            {
+              "name": "Bold Header",
+              "nickname": "BH",
+              "type": "bool",
+              "access": "item",
+              "default": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        },
+        {
+          "class_name": "FixedSizeTableComponent",
+          "file_name": "FixedSizeTable.cs",
+          "type": "component",
+          "role": "unit",
+          "note": "MOVED from Report Tools (tab removed). Same composite pattern as Data Tree To Table, but table shape is explicit (Rows x Columns) instead of inferred. If the data tree has fewer cells than Rows x Columns, remaining cells are left blank; if more, extras are dropped with a runtime warning. Self-indexed from 1.",
+          "inputs": [
+            {
+              "name": "Data",
+              "nickname": "D",
+              "type": "string",
+              "access": "tree",
+              "default": ""
+            },
+            {
+              "name": "Rows",
+              "nickname": "RO",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Columns",
+              "nickname": "CO",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Header Row",
+              "nickname": "HR",
+              "type": "bool",
+              "access": "item",
+              "default": true
+            },
+            {
+              "name": "Bold Header",
+              "nickname": "BH",
+              "type": "bool",
+              "access": "item",
+              "default": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Structure",
+      "type": "json",
+      "note": "Create Header / Create Footer / Create Footnote live in Document (http) — see design_note_segment_content. Only pure JSON units (no live API calls) remain here.",
+      "components": [
+        {
+          "class_name": "CreateNamedRangeJsonComponent",
+          "file_name": "CreateNamedRangeJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Name",
+              "nickname": "NM",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            },
+            {
+              "name": "Start Index",
+              "nickname": "SI",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "End Index",
+              "nickname": "EI",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "DeleteNamedRangeJsonComponent",
+          "file_name": "DeleteNamedRangeJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Name",
+              "nickname": "NM",
+              "type": "string",
+              "access": "item",
+              "default": ""
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        },
+        {
+          "class_name": "UpdateDocumentStyleJsonComponent",
+          "file_name": "UpdateDocumentStyleJson.cs",
+          "type": "component",
+          "role": "unit",
+          "inputs": [
+            {
+              "name": "Margin Top",
+              "nickname": "MT",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Margin Bottom",
+              "nickname": "MB",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Margin Left",
+              "nickname": "ML",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Margin Right",
+              "nickname": "MR",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Page Width",
+              "nickname": "PW",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Page Height",
+              "nickname": "PH",
+              "type": "double",
+              "access": "item",
+              "default": 0.0,
+              "optional": true
+            },
+            {
+              "name": "Background",
+              "nickname": "BG",
+              "type": "string",
+              "access": "item",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "item"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Combine",
+      "type": "json",
+      "note": "Request Aggregator is the single placement-and-gathering hub every self-indexed block passes through (it absorbed the former Arrange Content on 2026-09-13; that component has since been deleted).",
+      "components": [
+        {
+          "class_name": "RequestAggregatorComponent",
+          "file_name": "RequestAggregator.cs",
+          "type": "component",
+          "role": "aggregator",
+          "note": "ABSORBED Arrange Content (2026-09-13). Now the single placement-and-gathering hub: reads each wire into Request JSON as its own block (one further sub-block per branch), re-indexes them in wire order from Start Index by tallying content length, then appends Fixed Requests verbatim. Request JSON stays at parameter index 0 so saved definitions keep their wires. Run one instance per index space (body, or each header/footer/footnote).",
+          "inputs": [
+            {
+              "name": "Request JSON",
+              "nickname": "RJ",
+              "type": "string",
+              "access": "tree",
+              "default": "",
+              "optional": true
+            },
+            {
+              "name": "Start Index",
+              "nickname": "IX",
+              "type": "int",
+              "access": "item",
+              "default": 1
+            },
+            {
+              "name": "Fixed Requests",
+              "nickname": "FX",
+              "type": "string",
+              "access": "tree",
+              "default": "",
+              "optional": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Requests JSON",
+              "nickname": "RQ",
+              "type": "string",
+              "access": "list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Presets",
+      "type": "preset",
+      "components": [
+        {
+          "class_name": "NamedStyleTypePresetComponent",
+          "file_name": "NamedStyleTypePreset.cs",
+          "type": "preset",
+          "role": "preset",
+          "values": [
+            "NORMAL_TEXT",
+            "TITLE",
+            "SUBTITLE",
+            "HEADING_1",
+            "HEADING_2",
+            "HEADING_3",
+            "HEADING_4",
+            "HEADING_5",
+            "HEADING_6"
+          ],
+          "feeds": [
+            "UpdateParagraphStyleJsonComponent.Named Style",
+            "HeadingTextJsonComponent.Named Style"
+          ]
+        },
+        {
+          "class_name": "BulletGlyphPresetComponent",
+          "file_name": "BulletGlyphPreset.cs",
+          "type": "preset",
+          "role": "preset",
+          "values": [
+            "BULLET_DISC_CIRCLE_SQUARE",
+            "BULLET_DIAMONDX_ARROW3D_SQUARE",
+            "BULLET_CHECKBOX",
+            "BULLET_ARROW_DIAMOND_DISC",
+            "BULLET_STAR_CIRCLE_SQUARE",
+            "NUMBERED_DECIMAL_ALPHA_ROMAN",
+            "NUMBERED_DECIMAL_NESTED",
+            "NUMBERED_UPPERALPHA_ALPHA_ROMAN"
+          ],
+          "feeds": [
+            "CreateParagraphBulletsJsonComponent.Bullet Preset",
+            "BulletListComponent.Bullet Preset"
+          ]
+        },
+        {
+          "class_name": "AlignmentPresetComponent",
+          "file_name": "AlignmentPreset.cs",
+          "type": "preset",
+          "role": "preset",
+          "values": [
+            "START",
+            "CENTER",
+            "END",
+            "JUSTIFIED"
+          ],
+          "feeds": [
+            "UpdateParagraphStyleJsonComponent.Alignment",
+            "AlignedTextJsonComponent.Alignment"
+          ]
+        },
+        {
+          "class_name": "FontFamilyPresetComponent",
+          "file_name": "FontFamilyPreset.cs",
+          "type": "preset",
+          "role": "preset",
+          "note": "Unlike the other presets, Font Family is NOT a closed API enum — any installed font name string is valid. This is a curated shortcut list, not validation; Font Family inputs remain plain free-text and can still be typed directly.",
+          "values": [
+            "Arial",
+            "Calibri",
+            "Times New Roman",
+            "Georgia",
+            "Verdana",
+            "Courier New",
+            "Garamond",
+            "Trebuchet MS",
+            "Roboto",
+            "Open Sans"
+          ],
+          "feeds": [
+            "UpdateTextStyleJsonComponent.Font Family",
+            "FontFamilyTextJsonComponent.Font Family"
+          ]
+        }
+      ]
+    }
+  ],
+  "builders": [
+    {
+      "file_name": "TextRequestBuilders.cs",
+      "covers": [
+        "InsertText (gains optional segmentId param)",
+        "ReplaceAllText",
+        "DeleteContentRange (used internally by ClearDocument)",
+        "UpdateTextStyle (gains optional segmentId param, applied to both the insertText and updateTextStyle it wraps)",
+        "InsertStyledText (self-indexed insertText+updateTextStyle combo, gains optional segmentId param)"
+      ],
+      "used_by": [
+        "InsertTextJsonComponent",
+        "ReplaceAllTextJsonComponent",
+        "UpdateTextStyleJsonComponent",
+        "BoldTextJsonComponent",
+        "ItalicTextJsonComponent",
+        "UnderlineTextJsonComponent",
+        "StrikethroughTextJsonComponent",
+        "FontSizeTextJsonComponent",
+        "FontFamilyTextJsonComponent",
+        "TextColorTextJsonComponent",
+        "HighlightTextJsonComponent",
+        "LinkTextJsonComponent",
+        "BaselineTextJsonComponent",
+        "ClearDocumentComponent"
+      ]
+    },
+    {
+      "file_name": "ParagraphRequestBuilders.cs",
+      "covers": [
+        "UpdateParagraphStyle (gains optional segmentId param)",
+        "CreateParagraphBullets (gains optional segmentId param)",
+        "InsertStyledParagraph (self-indexed insertText+updateParagraphStyle combo, gains optional segmentId param)",
+        "InsertBulletedParagraph (self-indexed insertText+createParagraphBullets combo, gains optional segmentId param)"
+      ],
+      "used_by": [
+        "UpdateParagraphStyleJsonComponent",
+        "HeadingTextJsonComponent",
+        "AlignedTextJsonComponent",
+        "LineSpacingTextJsonComponent",
+        "IndentTextJsonComponent",
+        "SpaceAboveTextJsonComponent",
+        "SpaceBelowTextJsonComponent",
+        "CreateParagraphBulletsJsonComponent"
+      ]
+    },
+    {
+      "file_name": "InsertRequestBuilders.cs",
+      "covers": [
+        "InsertInlineImage",
+        "ReplaceImage",
+        "InsertTable",
+        "InsertPageBreak",
+        "InsertSectionBreak"
+      ],
+      "used_by": [
+        "InsertInlineImageJsonComponent",
+        "ReplaceImageJsonComponent",
+        "InsertTableJsonComponent",
+        "InsertPageBreakJsonComponent",
+        "InsertSectionBreakJsonComponent"
+      ]
+    },
+    {
+      "file_name": "StructureRequestBuilders.cs",
+      "covers": [
+        "CreateHeader (simplified — just the type:DEFAULT create request, no text)",
+        "CreateFooter (same)",
+        "CreateFootnote (same, keeps its Index param)",
+        "CreateNamedRange",
+        "DeleteNamedRange",
+        "UpdateDocumentStyle"
+      ],
+      "used_by": [
+        "CreateHeaderJsonComponent",
+        "CreateFooterJsonComponent",
+        "CreateFootnoteJsonComponent",
+        "CreateNamedRangeJsonComponent",
+        "DeleteNamedRangeJsonComponent",
+        "UpdateDocumentStyleJsonComponent"
+      ],
+      "note": "No separate 'insert into segment' helper needed — filling a header/footer/footnote reuses the existing TextRequestBuilders/ParagraphRequestBuilders methods with segmentId set, same as body content."
+    },
+    {
+      "file_name": "DocumentBuilders.cs",
+      "covers": [
+        "create_document body",
+        "batchUpdate body wrapper",
+        "requests array",
+        "index re-sequencing (ReindexBlocks/ContentLength — growth per request from the API reference: insertInlineImage +1, insertPageBreak/insertSectionBreak +2, insertTable structural footprint, createParagraphBullets minus removed leading tabs, deleteContentRange negative)"
+      ],
+      "used_by": [
+        "CreateDocumentComponent",
+        "BatchUpdateDocumentComponent",
+        "RequestAggregatorComponent",
+        "ClearDocumentComponent",
+        "CreateHeaderJsonComponent",
+        "CreateFooterJsonComponent",
+        "CreateFootnoteJsonComponent"
+      ]
+    },
+    {
+      "file_name": "AecHelperBuilders.cs",
+      "covers": [
+        "DataTreeToTable",
+        "FixedSizeTable",
+        "ReportSkeleton",
+        "ReportHeaderBlock",
+        "BulletList — all drop their startIndex parameter (always internally 1)"
+      ],
+      "used_by": [
+        "DataTreeToTableComponent",
+        "FixedSizeTableComponent",
+        "ReportSkeletonComponent",
+        "ReportHeaderBlockComponent",
+        "BulletListComponent"
+      ],
+      "note": "Composites built on TextRequestBuilders / ParagraphRequestBuilders / InsertRequestBuilders + a shared index-sequencer. Body-only for now — no segmentId plumbed through these composites (out of scope; flag if header/footer report-style content is wanted later)."
+    }
+  ],
+  "relations": [
+    {
+      "from": "*JsonComponent.Request JSON",
+      "to": "RequestAggregatorComponent.Request JSON",
+      "nickname": "RJ",
+      "access": "item→list",
+      "note": "SUPERSEDED — self-indexed blocks go into Request JSON (placed), everything else into Fixed Requests (pass-through)"
+    },
+    {
+      "from": "Text/Paragraph tab component (unit).Request JSON",
+      "to": "RequestAggregatorComponent.Request JSON",
+      "nickname": "RJ",
+      "access": "list→tree",
+      "note": "MANDATORY for every Text/Paragraph-tab component — none of them carry a real index anymore. Covers: Insert Text, Styled Text, Bold/Italic/Underline/Strikethrough/FontSize/FontFamily/TextColor/Highlight/Link/Baseline Text, Styled Paragraph, Heading/Aligned/LineSpacing/Indent/SpaceAbove/SpaceBelow Text, Bullet Item Text, Report Skeleton, Report Header Block, Bullet List"
+    },
+    {
+      "from": "Table tab composite.Request JSON",
+      "to": "RequestAggregatorComponent.Request JSON",
+      "nickname": "RJ",
+      "access": "list→tree",
+      "note": "Data Tree To Table / Fixed Size Table each emit a self-indexed Request JSON list straight into Request Aggregator"
+    },
+    {
+      "from": "ReplaceImageJson/ReplaceAllTextJson/UpdateDocumentStyleJson/UpdateTextStyleJson/UpdateParagraphStyleJson/CreateParagraphBulletsJson.Request JSON",
+      "to": "RequestAggregatorComponent.Fixed Requests",
+      "nickname": "FX",
+      "access": "item→tree",
+      "note": "index-free or explicit-index requests pass through untouched, after the placed blocks"
+    },
+    {
+      "from": "RequestAggregatorComponent.Requests JSON",
+      "to": "BatchUpdateDocumentComponent.Requests JSON",
+      "nickname": "RQ",
+      "access": "list→list"
+    },
+    {
+      "from": "CreateDocumentComponent.Document ID",
+      "to": "BatchUpdateDocumentComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item",
+      "note": "create-then-edit convenience chain"
+    },
+    {
+      "from": "GetDocumentComponent.Document ID",
+      "to": "ClearDocumentComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "CreateDocumentComponent.Document ID",
+      "to": "ClearDocumentComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "GetDocumentComponent.Document ID",
+      "to": "CreateHeaderJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "CreateDocumentComponent.Document ID",
+      "to": "CreateHeaderJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "GetDocumentComponent.Document ID",
+      "to": "CreateFooterJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "CreateDocumentComponent.Document ID",
+      "to": "CreateFooterJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "GetDocumentComponent.Document ID",
+      "to": "CreateFootnoteJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "CreateDocumentComponent.Document ID",
+      "to": "CreateFootnoteJsonComponent.Document ID",
+      "nickname": "DID",
+      "access": "item→item"
+    },
+    {
+      "from": "CreateHeaderJsonComponent.Header ID",
+      "to": "Text/Paragraph tab component.Segment ID",
+      "nickname": "SEG",
+      "access": "item→item",
+      "note": "Any Text/Paragraph-tab component's optional Segment ID input, targeting that header"
+    },
+    {
+      "from": "CreateFooterJsonComponent.Footer ID",
+      "to": "Text/Paragraph tab component.Segment ID",
+      "nickname": "SEG",
+      "access": "item→item",
+      "note": "Any Text/Paragraph-tab component's optional Segment ID input, targeting that footer"
+    },
+    {
+      "from": "CreateFootnoteJsonComponent.Footnote ID",
+      "to": "Text/Paragraph tab component.Segment ID",
+      "nickname": "SEG",
+      "access": "item→item",
+      "note": "Any Text/Paragraph-tab component's optional Segment ID input, targeting that footnote's body"
+    },
+    {
+      "from": "NamedStyleTypePresetComponent",
+      "to": "UpdateParagraphStyleJsonComponent.Named Style",
+      "nickname": "NS",
+      "access": "item→item"
+    },
+    {
+      "from": "NamedStyleTypePresetComponent",
+      "to": "HeadingTextJsonComponent.Named Style",
+      "nickname": "NS",
+      "access": "item→item"
+    },
+    {
+      "from": "AlignmentPresetComponent",
+      "to": "UpdateParagraphStyleJsonComponent.Alignment",
+      "nickname": "AL",
+      "access": "item→item"
+    },
+    {
+      "from": "AlignmentPresetComponent",
+      "to": "AlignedTextJsonComponent.Alignment",
+      "nickname": "AL",
+      "access": "item→item"
+    },
+    {
+      "from": "BulletGlyphPresetComponent",
+      "to": "CreateParagraphBulletsJsonComponent.Bullet Preset",
+      "nickname": "BP",
+      "access": "item→item"
+    },
+    {
+      "from": "BulletGlyphPresetComponent",
+      "to": "BulletListComponent.Bullet Preset",
+      "nickname": "BP",
+      "access": "item→item"
+    },
+    {
+      "from": "FontFamilyPresetComponent",
+      "to": "UpdateTextStyleJsonComponent.Font Family",
+      "nickname": "FF",
+      "access": "item→item"
+    },
+    {
+      "from": "FontFamilyPresetComponent",
+      "to": "FontFamilyTextJsonComponent.Font Family",
+      "nickname": "FF",
+      "access": "item→item"
+    }
+  ],
+  "payload_contracts": [
+    {
+      "resource": "Document",
+      "contract": {
+        "name": "Requests JSON",
+        "nickname": "RQ",
+        "access": "list"
+      },
+      "produced_by": "RequestAggregatorComponent",
+      "consumed_by": [
+        "BatchUpdateDocumentComponent"
+      ],
+      "note": "create_document uses a separate Title-only shape (API genuinely differs). Clear Document, Create Header, Create Footer, and Create Footnote each compose their own get/create + batch_update calls internally and do not consume this contract either — same precedent. Note the distinction: Create Header/Footer/Footnote's OWN create-segment call is separate, but the header/footer/footnote CONTENT (built with ordinary Text/Paragraph components + their Segment ID input) flows through the normal Requests JSON contract like any body content."
+    }
+  ],
+  "aec_features": [
+    {
+      "rank": 1,
+      "name": "DataTreeToTable",
+      "component": "DataTreeToTableComponent",
+      "status": "selected",
+      "summary": "GH data tree (branch = row) -> populated Google Docs table with pre-computed cell indices; optional bold header"
+    },
+    {
+      "rank": 2,
+      "name": "ReportSkeleton",
+      "component": "ReportSkeletonComponent",
+      "status": "selected",
+      "summary": "Parallel heading/body lists -> titled, styled, fully-indexed report scaffold"
+    },
+    {
+      "rank": 3,
+      "name": "ReportHeaderBlock",
+      "component": "ReportHeaderBlockComponent",
+      "status": "selected",
+      "summary": "Standard project title block (name + Project No./Date/Author/Revision); Date defaults to today"
+    },
+    {
+      "rank": 5,
+      "name": "BulletList",
+      "component": "BulletListComponent",
+      "status": "selected",
+      "summary": "List of strings -> bulleted/numbered/checkbox list, self-indexed"
+    },
+    {
+      "rank": 7,
+      "name": "FixedSizeTable",
+      "component": "FixedSizeTableComponent",
+      "status": "selected",
+      "summary": "Explicit Rows x Columns table (pads/crops vs. a data tree), for when table size shouldn't be inferred from the data alone"
+    }
+  ],
+  "aec_features_not_selected": [
+    {
+      "rank": 4,
+      "name": "PageStamp",
+      "reason": "Deferred — confirmed there is genuinely no 'Page X of Y' field anywhere in the Docs API request set (not a design choice, an API limitation). Now that headers/footers can hold text (this pass), a footer can carry a STATIC string like \"Page 1\", but there is no auto-incrementing token the API exposes."
+    }
+  ]
+}

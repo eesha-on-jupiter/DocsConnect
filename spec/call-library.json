@@ -1,0 +1,156 @@
+[
+  {
+    "endpoint_id": "auth_check",
+    "component": "DocsConnectAuthComponent",
+    "method": "GET",
+    "base_url": "https://oauth2.googleapis.com",
+    "url_template": "/tokeninfo",
+    "path_params": [],
+    "query_params": [
+      {
+        "name": "access_token",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "headers": {},
+    "body_schema": null,
+    "response_schema": {
+      "scope": "string",
+      "expires_in": "int",
+      "azp": "string",
+      "aud": "string"
+    },
+    "example_request": {},
+    "example_response": {
+      "azp": "xxxx.apps.googleusercontent.com",
+      "scope": "https://www.googleapis.com/auth/documents",
+      "expires_in": 3599
+    },
+    "notes": "Manual entry (not in Docs API). Validates the OAuth access token and returns granted scopes for the Auth component. Token sent as access_token query param to Google tokeninfo.",
+    "status": "EXTRACTED"
+  },
+  {
+    "endpoint_id": "get_document",
+    "component": "GetDocumentComponent",
+    "method": "GET",
+    "base_url": "https://docs.googleapis.com",
+    "url_template": "/v1/documents/{documentId}",
+    "path_params": [
+      {
+        "name": "documentId",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "query_params": [],
+    "headers": {
+      "Authorization": "Bearer {token}"
+    },
+    "body_schema": null,
+    "response_schema": {
+      "documentId": "string",
+      "title": "string",
+      "body": "object",
+      "namedStyles": "object",
+      "revisionId": "string"
+    },
+    "example_request": {},
+    "example_response": {
+      "documentId": "1aBcD...",
+      "title": "My Document"
+    },
+    "notes": "Returns the full structured document. No request body.",
+    "status": "EXTRACTED"
+  },
+  {
+    "endpoint_id": "create_document",
+    "component": "CreateDocumentComponent",
+    "method": "POST",
+    "base_url": "https://docs.googleapis.com",
+    "url_template": "/v1/documents",
+    "path_params": [],
+    "query_params": [],
+    "headers": {
+      "Authorization": "Bearer {token}",
+      "Content-Type": "application/json"
+    },
+    "body_schema": {
+      "title": {
+        "type": "string",
+        "required": false
+      }
+    },
+    "response_schema": {
+      "documentId": "string",
+      "title": "string",
+      "body": "object"
+    },
+    "example_request": {
+      "title": "My Document"
+    },
+    "example_response": {
+      "documentId": "1aBcD...",
+      "title": "My Document"
+    },
+    "notes": "body_schema supplied from the Google Docs discovery doc (extractor returned null on the JS-rendered page). Body is just {title}; response carries the new documentId.",
+    "status": "EXTRACTED"
+  },
+  {
+    "endpoint_id": "batch_update_document",
+    "component": "BatchUpdateDocumentComponent",
+    "method": "POST",
+    "base_url": "https://docs.googleapis.com",
+    "url_template": "/v1/documents/{documentId}:batchUpdate",
+    "path_params": [
+      {
+        "name": "documentId",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "query_params": [],
+    "headers": {
+      "Authorization": "Bearer {token}",
+      "Content-Type": "application/json"
+    },
+    "body_schema": {
+      "requests": {
+        "type": "array",
+        "required": true,
+        "items": "Request (oneOf 23 typed request objects)"
+      },
+      "writeControl": {
+        "type": "object",
+        "required": false,
+        "fields": {
+          "requiredRevisionId": "string",
+          "targetRevisionId": "string"
+        }
+      }
+    },
+    "response_schema": {
+      "documentId": "string",
+      "replies": "array",
+      "writeControl": "object"
+    },
+    "example_request": {
+      "requests": [
+        {
+          "insertText": {
+            "location": {
+              "index": 1
+            },
+            "text": "Hello world"
+          }
+        }
+      ]
+    },
+    "example_response": {
+      "documentId": "1aBcD...",
+      "replies": []
+    },
+    "notes": "body_schema supplied from the Google Docs discovery doc (extractor returned null on the JS-rendered page). 'requests' is the workhorse array; custom-method colon path ':batchUpdate'.",
+    "status": "EXTRACTED"
+  }
+]

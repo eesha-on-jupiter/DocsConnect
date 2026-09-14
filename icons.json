@@ -1,0 +1,89 @@
+{
+  "plugin_name": "DocsConnect",
+  "plugin_prefix": "GDC",
+  "resources_path": "Icons",
+  "resx_path": "Properties/Resources.resx",
+
+  "defaults": {
+    "size": 24,
+    "background": {},
+    "fg_color": "#8FD3FF",
+    "glyph": { "fit": 0.80 }
+  },
+
+  "plugin_icon": {
+    "_note": "Hand-designed asset: GDC_Plugin_Icon.svg (two-tone circle, light blue #8FD3FF left half, dark blue #0B2A54 right half), rasterised to GDC_Plugin_Icon.png (1500px) and GDC_Plugin_Icon_16px.png, the latter copied to Icons/GDC_DocsConnectLogo.png and embedded in Resources.resx. Do NOT run generate_plugin_icon — it would overwrite the custom icon from the fields below.",
+    "size": 16,
+    "fg_iconify_id": "ion:document",
+    "fg_color": "#8FD3FF",
+    "background": { "shape": { "type": "circle", "fill": "#0B2A54" } }
+  },
+
+  "subcategories": {
+    "Connect":     { "background": { "shape": { "type": "circle",            "fill": "#0B2A54" } } },
+    "Document":    { "background": { "shape": { "type": "document",          "fill": "#0B2A54" } } },
+    "Text":        { "background": { "shape": { "type": "rounded-rectangle", "fill": "#0B2A54" } } },
+    "Paragraph":   { "background": { "shape": { "type": "bubble",          "fill": "#0B2A54" } } },
+    "Insert":      { "background": { "shape": { "type": "arrow-square",      "fill": "#0B2A54" } } },
+    "Table":       { "background": { "shape": { "type": "cut-square",       "fill": "#0B2A54" } } },
+    "Combine":     { "background": { "shape": { "type": "circle",           "fill": "#0B2A54" } } },
+    "Presets":     { "background": { "shape": { "type": "bookmark",         "fill": "#0B2A54" } } }
+  },
+
+  "components": [
+    { "name": "DocsConnectAuth", "subcategory": "Connect", "fg_iconify_id": "mdi:key" },
+
+    { "name": "GetDocument",         "subcategory": "Document", "fg_iconify_id": "mdi:file-find" },
+    { "name": "CreateDocument",      "subcategory": "Document", "fg_iconify_id": "mdi:file-plus" },
+    { "name": "BatchUpdateDocument", "subcategory": "Document", "fg_iconify_id": "mdi:file-edit" },
+    { "name": "ClearDocument",       "subcategory": "Document", "fg_iconify_id": "mdi:file-remove" },
+    { "name": "CreateHeaderJson",    "subcategory": "Document", "fg_iconify_id": "mdi:page-layout-header" },
+    { "name": "CreateFooterJson",    "subcategory": "Document", "fg_iconify_id": "mdi:page-layout-footer" },
+    { "name": "CreateFootnoteJson",  "subcategory": "Document", "fg_iconify_id": "mdi:format-superscript" },
+    { "name": "UpdateDocumentStyleJson", "subcategory": "Document", "fg_iconify_id": "mdi:file-cog" },
+
+    { "name": "InsertTextJson",        "subcategory": "Text", "fg_iconify_id": "mdi:text-box-plus" },
+    { "name": "ReplaceAllTextJson",    "subcategory": "Text", "fg_iconify_id": "mdi:find-replace" },
+    { "name": "UpdateTextStyleJson",   "subcategory": "Text", "fg_iconify_id": "mdi:format-color-text" },
+    { "name": "BoldTextJson",          "subcategory": "Text", "fg_iconify_id": "mdi:format-bold" },
+    { "name": "ItalicTextJson",        "subcategory": "Text", "fg_iconify_id": "mdi:format-italic" },
+    { "name": "UnderlineTextJson",     "subcategory": "Text", "fg_iconify_id": "mdi:format-underline" },
+    { "name": "StrikethroughTextJson", "subcategory": "Text", "fg_iconify_id": "mdi:format-strikethrough" },
+    { "name": "FontSizeTextJson",      "subcategory": "Text", "fg_iconify_id": "mdi:format-size" },
+    { "name": "FontFamilyTextJson",    "subcategory": "Text", "fg_iconify_id": "mdi:format-font" },
+    { "name": "TextColorTextJson",     "subcategory": "Text", "fg_iconify_id": "mdi:palette-outline" },
+    { "name": "HighlightTextJson",     "subcategory": "Text", "fg_iconify_id": "mdi:marker" },
+    { "name": "LinkTextJson",          "subcategory": "Text", "fg_iconify_id": "mdi:link-variant" },
+    { "name": "BaselineTextJson",      "subcategory": "Text", "fg_iconify_id": "mdi:format-superscript" },
+
+    { "name": "UpdateParagraphStyleJson",   "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-paragraph" },
+    { "name": "CreateParagraphBulletsJson", "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-list-bulleted" },
+    { "name": "HeadingTextJson",            "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-header-1" },
+    { "name": "AlignedTextJson",            "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-align-left" },
+    { "name": "LineSpacingTextJson",        "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-line-spacing" },
+    { "name": "IndentTextJson",             "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-indent-increase" },
+    { "name": "SpaceAboveTextJson",         "subcategory": "Paragraph", "fg_iconify_id": "mdi:arrow-collapse-up" },
+    { "name": "SpaceBelowTextJson",         "subcategory": "Paragraph", "fg_iconify_id": "mdi:arrow-collapse-down" },
+    { "name": "ReportSkeleton",             "subcategory": "Paragraph", "fg_iconify_id": "mdi:file-document" },
+    { "name": "ReportHeaderBlock",          "subcategory": "Paragraph", "fg_iconify_id": "mdi:card-text" },
+    { "name": "BulletList",                 "subcategory": "Paragraph", "fg_iconify_id": "mdi:format-list-checkbox" },
+
+    { "name": "CaptureRhinoView",       "subcategory": "Insert", "fg_iconify_id": "mdi:camera" },
+    { "name": "GetImageUrl",            "subcategory": "Insert", "fg_iconify_id": "mdi:link-variant" },
+    { "name": "InsertInlineImageJson",  "subcategory": "Insert", "fg_iconify_id": "mdi:image-plus" },
+    { "name": "ReplaceImageJson",       "subcategory": "Insert", "fg_iconify_id": "mdi:image-sync" },
+    { "name": "InsertPageBreakJson",    "subcategory": "Insert", "fg_iconify_id": "mdi:format-page-break" },
+    { "name": "InsertSectionBreakJson", "subcategory": "Insert", "fg_iconify_id": "mdi:file-document-multiple" },
+
+    { "name": "DataTreeToTable",   "subcategory": "Table", "fg_iconify_id": "mdi:table-arrow-right" },
+    { "name": "FixedSizeTable",    "subcategory": "Table", "fg_iconify_id": "mdi:table-cog" },
+
+    { "name": "RequestAggregator", "subcategory": "Combine", "fg_iconify_id": "mdi:code-braces" },
+    { "name": "AppendCursor",      "subcategory": "Combine", "fg_iconify_id": "mdi:cursor-text" },
+
+    { "name": "NamedStyleTypePreset", "subcategory": "Presets", "fg_iconify_id": "mdi:format-font" },
+    { "name": "BulletGlyphPreset",    "subcategory": "Presets", "fg_iconify_id": "mdi:format-list-bulleted-type" },
+    { "name": "AlignmentPreset",      "subcategory": "Presets", "fg_iconify_id": "mdi:format-align-center" },
+    { "name": "FontFamilyPreset",     "subcategory": "Presets", "fg_iconify_id": "mdi:format-text-variant" }
+  ]
+}

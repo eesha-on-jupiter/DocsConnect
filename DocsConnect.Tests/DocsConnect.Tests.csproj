@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Concern-based test project — compiles the pure builder sources directly (net8.0),
+       never a ProjectReference to the windows-only .gha. (pr-test-scaffolder / dogfood F6/F7) -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <!-- Compile the pure builder sources in directly — no reference to the windows-only .gha -->
+  <ItemGroup>
+    <Compile Include="..\JSON Builders\**\*.cs" />
+  </ItemGroup>
+
+</Project>

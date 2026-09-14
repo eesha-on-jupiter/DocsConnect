@@ -1,0 +1,10 @@
+{
+  "plugin_name": "DocsConnect",
+  "platform": "Google Docs API",
+  "docs_url": "https://developers.google.com/docs/api/reference/rest",
+  "docs_url_note": "User originally supplied a Bing-ad marketing redirect to cloud.google.com/apis; replaced with the real Google Docs API REST reference after confirming scope = Google Docs API.",
+  "base_url": "https://docs.googleapis.com",
+  "auth_method": "OAuth 2.0 (Bearer token)",
+  "token_ready": false,
+  "token_note": "User will generate an OAuth access token at Phase 7 — prompt then."
+}

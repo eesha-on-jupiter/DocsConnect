@@ -1,0 +1,7 @@
+# Combine
+
+| Component | Description |
+|---|---|
+| [Request Aggregator](RequestAggregator.md) | Places self-indexed Request JSON blocks in wire order from a Start Index, appends any fixed requests, and emits one Requests JSON array for Batch Update. The mandatory hub for every Text/Paragraph/Table/Insert block. |
+
+This tab is the linchpin of the whole plugin's data flow. Text-, Paragraph-, Table-, and (with one exception) Insert-tab components no longer author real document indices — each one emits a self-contained Request JSON block at a placeholder position instead. Request Aggregator reads each wire into its Request JSON input as one block, walks through them in wire order, tallying up how much content each one adds (or removes), and re-indexes them into the real positions they'll occupy once applied in sequence. One Request Aggregator instance covers exactly one index space — the document body, or a single header/footer/footnote segment — so a document with several segments needs several instances, one per segment. Its Fixed Requests input takes the Request JSON of components that are index-free by nature — Replace Image (targets an existing image by object ID, not a position), Replace All Text, Update Document Style, Create Header/Footer — or that already carry explicit indices (Update Text Style, Update Paragraph Style, Create Paragraph Bullets), and passes them through untouched after the placed blocks. The result is a single flat Requests JSON list, which is what Batch Update Document sends to the API in one call.

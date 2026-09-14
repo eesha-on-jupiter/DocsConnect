@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Rhino 7: net48 | Rhino 8 Windows: net7.0-windows | Rhino 8 Mac: net7.0 -->
+    <TargetFrameworks>net7.0-windows;net7.0;net48</TargetFrameworks>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <TargetExt>.gha</TargetExt>
+    <NoWarn>NU1701;NETSDK1086</NoWarn>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Assembly + Yak metadata -->
+    <Version>1.0.0</Version>
+    <Title>DocsConnect</Title>
+    <Company>DocsConnect Authors</Company>
+    <Description>Grasshopper components for the Google Docs API — create, read, and batch-update Google Docs from Rhino/Grasshopper.</Description>
+  </PropertyGroup>
+
+  <!-- Test project lives in a subfolder; keep it out of the main plugin build -->
+  <ItemGroup>
+    <Compile Remove="DocsConnect.Tests\**\*.cs" />
+    <EmbeddedResource Remove="DocsConnect.Tests\**" />
+    <None Remove="DocsConnect.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grasshopper" Version="7.0.20314.3001" Condition="$(TargetFramework) == 'net48'" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" Condition="!$(TargetFramework.StartsWith('net4'))" ExcludeAssets="runtime" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <!-- net48 (Rhino 7): the System.Net.Http facade is NOT auto-referenced in an SDK-style net48
+       project, but DocsConnectClient.cs uses HttpClient/HttpRequestMessage/HttpMethod. Without
+       this the net48 target fails with CS1069. (dogfood F3) -->
+  <ItemGroup Condition="$(TargetFramework) == 'net48'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <!-- net48 (Rhino 7): embedding a Bitmap into Resources.resx is a non-string resource. SDK-style
+       net48 builds need GenerateResourceUsePreserializedResources=true + System.Resources.Extensions
+       or they fail with MSB3823/MSB3822 the moment the first icon is added. (dogfood F4) -->
+  <PropertyGroup Condition="$(TargetFramework) == 'net48'">
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+  <ItemGroup Condition="$(TargetFramework) == 'net48'">
+    <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
+  </ItemGroup>
+
+  <!-- Windows-only builds (Rh7 net48 + Rh8 net7.0-windows) -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('-windows')) or $(TargetFramework.StartsWith('net4'))">
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <!-- WinForms for .NET 7.0 on macOS (Rh8 Mac) -->
+  <ItemGroup Condition="!($(TargetFramework.Contains('-windows')) or $(TargetFramework.StartsWith('net4')))">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" ExcludeAssets="all" GeneratePathProperty="true" />
+    <Reference Include="$(PkgMicrosoft_NETFramework_ReferenceAssemblies_net48)\build\.NETFramework\v4.8\System.Windows.Forms.dll" Private="False" />
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" ExcludeAssets="runtime" />
+    <!-- net7.0 Mac also embeds Bitmap resources and needs the pre-serialized resource support
+         (the net7.0-windows target gets this transitively via WinForms). (dogfood F4) -->
+    <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
+  </ItemGroup>
+  <PropertyGroup Condition="!($(TargetFramework.Contains('-windows')) or $(TargetFramework.StartsWith('net4')))">
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Enable debugging in Rhino 7 on Mac -->
+  <Target Name="CopyPdbForMonoDebugging" AfterTargets="AfterBuild">
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFiles="$(TargetDir)$(TargetName).gha.pdb"
+          Condition="$([MSBuild]::IsOSPlatform(OSX)) and $(TargetFramework.StartsWith('net4')) and Exists('$(TargetDir)$(TargetName).pdb')" />
+  </Target>
+
+</Project>

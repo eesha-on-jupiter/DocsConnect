@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1500" height="1500">
+  <!-- DocsConnect logo: one circle, halves side by side — light blue left, dark blue right -->
+  <path d="M 50 2 A 48 48 0 0 0 50 98 Z" fill="#8FD3FF"/>
+  <path d="M 50 98 A 48 48 0 0 0 50 2 Z" fill="#0B2A54"/>
+</svg>

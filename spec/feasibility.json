@@ -1,0 +1,46 @@
+{
+  "platform": "Google Docs API",
+  "base_url": "https://docs.googleapis.com",
+  "auth_method": "OAuth 2.0 (Bearer token)",
+  "api_version": "v1",
+  "oauth_scopes": [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file"
+  ],
+  "extra_headers": {
+    "Content-Type": "application/json"
+  },
+  "openapi_spec": {
+    "available": true,
+    "kind": "Google Discovery document (not OpenAPI)",
+    "url": "https://docs.googleapis.com/$discovery/rest?version=v1"
+  },
+  "resources": [
+    {
+      "name": "Document",
+      "endpoints": [
+        { "id": "get_document",    "method": "GET",  "path": "/v1/documents/{documentId}", "desc": "Retrieve the latest version of a document (full structured content)" },
+        { "id": "create_document", "method": "POST", "path": "/v1/documents", "desc": "Create a new blank document with a title" },
+        { "id": "batch_update_document", "method": "POST", "path": "/v1/documents/{documentId}:batchUpdate", "desc": "Apply a list of update Requests to an existing document (the workhorse endpoint)" }
+      ]
+    }
+  ],
+  "batch_update_request_types": [
+    "ReplaceAllTextRequest", "InsertTextRequest", "UpdateTextStyleRequest",
+    "CreateParagraphBulletsRequest", "DeleteParagraphBulletsRequest",
+    "CreateNamedRangeRequest", "DeleteNamedRangeRequest", "UpdateParagraphStyleRequest",
+    "DeleteContentRangeRequest", "InsertInlineImageRequest", "InsertTableRequest",
+    "InsertTableRowRequest", "InsertTableColumnRequest", "DeleteTableRowRequest",
+    "DeleteTableColumnRequest", "InsertPageBreakRequest", "ReplaceImageRequest",
+    "UpdateDocumentStyleRequest", "MergeTableCellsRequest", "CreateHeaderRequest",
+    "CreateFooterRequest", "CreateFootnoteRequest", "InsertSectionBreakRequest"
+  ],
+  "design_note": "batchUpdate is a single endpoint that accepts an array of typed Request objects. This maps cleanly onto the PleaseREST modular write model: each request type becomes a 'unit' component emitting one request JSON, an aggregator gathers them into a 'requests' array, and a single BatchUpdate 'write' component sends them. One payload contract (Request JSON list) feeds the one write verb.",
+  "notes": [
+    "Auth header: Authorization: Bearer <access_token>",
+    "batchUpdate path uses a custom-method colon suffix ':batchUpdate' (not a standard sub-path)",
+    "No DELETE endpoints exist in the Docs API — document deletion is handled by the Drive API (out of scope for this plugin)",
+    "Discovery doc is Google's own format, not OpenAPI/Swagger; api-extractor may need extract_from_docs rather than extract_from_openapi"
+  ]
+}

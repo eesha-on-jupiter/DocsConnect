@@ -1,0 +1,129 @@
+{
+  "plugin_name": "DocsConnect",
+  "platform": "Google Docs API",
+  "docs_url": "https://developers.google.com/docs/api/reference/rest",
+  "base_url": "https://docs.googleapis.com",
+  "auth_method": "OAuth 2.0 (Bearer token)",
+  "token_env_var": "PLEASE_REST_TOKEN",
+  "findings_path": "dogfood/DocsConnect-run-01.md",
+  "started": "2026-06-21T12:24:00",
+  "last_active": "2026-09-13T17:40:25",
+  "please_rest_version": "2.6.0",
+  "current_phase": 14,
+  "current_phase_name": "GitHub / packaging (code, tests and docs complete; demos + live Gate 6 + yak + publish pending)",
+  "completed_phases": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "gates_passed": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "gates_pending": [
+    6,
+    7
+  ],
+  "last_completed_step": "Extend round 3 (2026-09-13), version stays 1.0.0 until the first GitHub release. Placement rework driven by live canvas testing, logged F25-F36. Request Aggregator absorbed Arrange Content (deleted): one wire = one block, merged lists split where an insert restarts at 1, Start Index 1 = top of the addressed index space (0 for segments), Fixed Requests pass-through, mixed index spaces refused, content inserts in Fixed Requests refused, per-insert style reset (Normal text / bullets removed / updateTextStyle fields:*). Growth constants from the API reference in one place: page/section break 2, image 1, table structure, bullets minus stripped tabs, CRLF normalised. Segment content starts at 0 (Create Header/Footer at 0, Footnote at 1). Composites output lists so Merge keeps slot order; every request component warns on re-solve; Batch Update warns on >1 insert at a segment start. Bullet Preset validated. Tables: a row's request items expand to one cell per formatted line; format trees Bold/Italic/Underline/Font Size/Font Family/Text Color/Fill (updateTableCellStyle); Fixed Size Table flat-branch row-major; Data Tree To Table Transpose. Formatted Table added then removed at user request. Image chain list-native: Capture Rhino View takes view lists (distinct auto-names), Get Image URL lists, Insert Image Own Paragraph. 153 unit tests incl. PlacementSweepTests over every content-emitting builder. docs/ + changelog, README.md, CLAUDE.md, LICENSE, .gitignore written; spec/todo.md regenerated.",
+  "next_step": "User rebuilds demos/*.gh against the current build (user-owned, not to be touched by the pipeline). Then GATE 6 live re-verification of the current build: header/footer content at segment index 0, nested Bullet List followed by another block, image list one per line, table Fill and the fields:'*' style reset (both built to the reference, not yet exercised live). Then /rest-package for .yak on all three targets and GitHub publish (GATE 7).",
+  "mcp_test": {
+    "driver": "cordyceps bridge, Rhino 8 Core 8",
+    "demos_built": [
+      "demos/01-connect.gh",
+      "demos/02-get-document.gh",
+      "demos/03-insert-text-arrange-batchupdate.gh",
+      "demos/04-datatree-to-table.gh",
+      "demos/05-report-skeleton.gh"
+    ],
+    "extend_round_2026-07-26": {
+      "rebuilt_from_scratch": true,
+      "reason": "index-free rework (Text/Paragraph/Document/Table/Combine subcategories) had never been re-verified live; prior demos/*.gh predated the rework",
+      "auto_verified_live": [
+        "Insert Text + Bold Text -> Arrange Content -> Request Aggregator: cumulative indices correct (1, 23) and Bold's updateTextStyle range [23,36) matches its own insertText location",
+        "Data Tree To Table 2x3 (header row bolded, data row not) via Merge+Entwine row fixture -> Arrange Content -> Aggregator: insertTable rows=2 columns=3 confirmed",
+        "Report Skeleton (Title + 2 Headings/Levels/Bodies via Merge) -> Arrange Content -> Aggregator: TITLE/HEADING_1/NORMAL_TEXT sequenced with contiguous non-overlapping ranges"
+      ],
+      "bugs_found_and_fixed": [
+        "F14 — ArrangeContentComponent list-vs-tree access mismatch, see dogfood log"
+      ],
+      "bridge_technique_notes": [
+        "F15 — use native Entwine (not implicit multi-wire merge) for multi-branch tree fixtures, see dogfood log"
+      ]
+    },
+    "human_gated": [
+      "Connect/Auth",
+      "Get Document",
+      "Batch Update — ButtonComponent button-press cannot be bridge-triggered (F7); builder/aggregator layer feeding them is fully live-verified"
+    ],
+    "errors": 0
+  },
+  "test_seed_doc_id": "1mnF2mvJ3rfOpKpwL3b8yJWoXT99uxXmcVCV1GaUWhGY",
+  "decisions": {
+    "aec_features_selected": [
+      "DataTreeToTable",
+      "ReportSkeleton",
+      "ReportHeaderBlock",
+      "BulletList",
+      "ArrangeContent (renamed from AppendCursor)",
+      "FixedSizeTable"
+    ],
+    "aec_features_deferred": [
+      "PageStamp — no live page-number field in API"
+    ],
+    "skipped_endpoints": [],
+    "partial_calls": [],
+    "manual_fixes": [
+      "auth_check: validated out-of-band (query-param/Bearer tokeninfo) — client uses Bearer header",
+      "create/batchUpdate body_schema enriched from discovery doc"
+    ],
+    "scope_notes": [
+      "batchUpdate request set expanded 6->21 units at user request",
+      "Drive API markdown bridge deferred to v2",
+      "POST-GATE-6: Get Document extended to also resolve a doc by Name via Drive files.list (Docs API has no search). Added 'Name' input + 'Document ID' output (resolved id, chains into Batch Update). New client method FindDocumentsByNameAsync. Build clean on all 3 targets (0 err). Drive search call is UNVALIDATED live — needs a fresh drive.readonly-scoped token; documents token expired (tokeninfo 400). drive.file scope only sees app-created files.",
+      "POST-GATE-6 (2026-06-30): Icons restyled to a blue hard long-shadow per user — shadow #1652C9, opacity 0.6, offset [0.12,0.12], blur 0 (was dark-navy #0A2356 @0.45). Re-rendered all 37 component icons + 16x16 plugin logo and re-embedded in Resources.resx. Glyphs unchanged (blue gradient #4FA3FF->#1652C9, glyph-only, outline).",
+      "Gate 6 (2026-07-03): user confirmed 'Gate 6 looks good' — all components incl. the 4 ButtonComponent HTTP calls verified live in Grasshopper against the seed doc. Proceeding to Phase 13 Docs.",
+      "POST-GATE-6 (2026-07-03): Subcategory rename — user asked for intuitive tab names; renamed all 10 toolbar subcategories: Auth->Connect, Requests - Text->Text, Requests - Paragraph->Paragraph, Requests - Insert->Insert, Requests - Table->Table, Requests - Structure->Structure, Requests - Aggregate->Combine, AEC Helpers->Report Tools (Document, Presets unchanged). Updated the single source of truth (Utilities/PluginUtilities.cs category constants), renamed the matching Components/ subfolders, and updated plugin-spec.json + icons.json to match. Icon style flipped from outline to solid: every fg_iconify_id switched from its mdi '-outline'/line variant to the solid mdi equivalent (e.g. mdi:key-outline -> mdi:key); glyph-only, blue gradient fg, blue hard long-shadow all kept unchanged. All 34 component icons + 16x16 plugin logo regenerated via pr-icon-generator MCP and re-embedded in Resources.resx; all 3 build targets (net48/net7.0-windows/net7.0) rebuilt clean, 0 errors.",
+      "POST-GATE-6 (2026-07-03, same session): user then said 'remove the background - just the front solid icons is fine' — confirmed via question this meant dropping the drop-shadow effect (the offset darker-blue duplicate glyph was reading as a background), not a literal background shape (icons.json already had background:{} / none). Removed the shadow block from defaults + plugin_icon in icons.json; kept solid glyph + blue gradient + no background. Regenerated + re-embedded all 34 icons + plugin logo again; rebuild clean, 0 errors.",
+      "POST-GATE-6 (2026-07-03, same session): user reported still not seeing the change in Rhino's ribbon after their own reload+rebuild. Root cause found: Rhino (running process) holds bin/Debug/net7.0-windows/DocsConnect.gha locked, so any build attempted while Rhino is open fails to update that specific target (MSB3027, exceeded retry count) — net48/net7.0 (Mac) still update fine, masking the failure. That net7.0-windows output is exactly what grasshopper_kernel.xml's Assemblies:Folders dev-setting loads, so Rhino kept showing the old icons/tab names indefinitely. Re-ran generate_icon/add_to_resources for all 34 icons + plugin logo once more (icons.json content unchanged, background:{} + no shadow + solid glyphs), then rebuilt after Rhino was closed — succeeded, 0 errors, net7.0-windows .gha confirmed freshly written (2026-07-03 22:21:49). TAKEAWAY for future icon/asset changes on this plugin: Rhino MUST be fully closed before rebuilding, or the net7.0-windows target silently/erroredly fails to update while other targets succeed.",
+      "POST-GATE-6 (2026-07-03, same session): even after a confirmed-fresh build with Rhino fully closed and reopened after, user still reported not seeing icon changes in the ribbon (root cause never fully isolated — file-level checks all passed). User then said 'Remove all icons' — decided to stop showing custom icons entirely rather than continue debugging. Set all 36 components' `Icon` property override to `null` (was `Properties.Resources.GDC_<Name>`), so Grasshopper renders its own default fallback icon per component. Left `Properties/Resources.resx`, `Resources.Designer.cs`, `Icons/*.png`, and `icons.json` untouched (now-unreferenced but harmless) in case icons are revisited later. `DocsConnectInfo.cs`'s assembly-level `Icon` was already `null` (never wired). Also newly discovered: `DocsConnectPriority.PriorityLoad()` in DocsConnectInfo.cs never actually calls `Instances.ComponentServer.AddCategoryIcon(...)` for the 16x16 plugin/ribbon-tab logo — that wiring was never done despite Phase 11 rendering `GDC_DocsConnectLogo`, so the tab icon was never showing regardless of icon content. Rebuilt after this change: 0 errors, 21 pre-existing CA1416 warnings only.",
+      "EXTEND ROUND (2026-07-04): Index-free rework, spanning several design turns before implementation. Root request: eliminate manual index bookkeeping across Text/Paragraph/Report-Tools components. Design landed on: every Text/Paragraph unit component is self-contained (authors its request(s) at placeholder index 1) and stacks through a renamed AppendCursor->ArrangeContentComponent (same GUID), now the mandatory placement hub instead of an optional advanced tool. UpdateTextStyleJson/UpdateParagraphStyleJson kept (renamed Styled Text/Styled Paragraph, reworked to take Text + no index) alongside new atomic single-trait components (10 for Text: Bold/Italic/Underline/Strikethrough/FontSize/FontFamily/TextColor/Highlight/Link/Baseline; 6 for Paragraph: Heading/Aligned/LineSpacing/Indent/SpaceAbove/SpaceBelow). Delete Content Range and Delete Paragraph Bullets both removed (range-based on pre-existing content, can't be made self-contained) — Delete Content Range replaced by a new full-document-only Clear Document write component (Document tab); Delete Paragraph Bullets dropped entirely with no replacement per explicit user choice. Discovered mid-design that Create Header/Create Footer/Create Footnote only ever created empty segment shells with no way to insert content (SharedBuilders.Location/Range had no segmentId support) — fixed by adding an optional segmentId param to Location/Range (default null = body, all existing call sites unaffected) and giving every Text/Paragraph component an optional Segment ID input; wiring a Header/Footer/Footnote ID into it targets that segment. After user pushback on two intermediate designs (first: two-step live components with no Text input at all; then: no Text input, Segment-ID-only), landed on a hybrid: Create Header/Footer/Footnote take an OPTIONAL Text input (sets content directly in one step if filled, or just creates the empty segment + returns the ID for later Segment-ID-based content if left blank) — both paths open. All three moved from Structure (json) to Document (http) tab since they now make live API calls (subcategory hard rule: JSON and HTTP components stay separate). Also added: Fixed Size Table (Report Tools) as a SEPARATE new component from Data Tree To Table for explicit Rows x Columns control (pad/crop vs. tree-inferred sizing), and a Font Family preset (Presets tab) — flagged as a curated shortcut list, NOT a closed enum like the other presets, since Font Family accepts any string. New components get Icon => null (no icon asset generated yet); existing edited components keep their original Properties.Resources.GDC_<Name> icon references unchanged — note the 'Set all 36 components Icon to null' entry above is STALE relative to actual file state (verified by reading the files directly: they still reference Properties.Resources.GDC_*, not null) — trust file state over that log entry."
+    ],
+    "extend_rounds": [
+      {
+        "date": "2026-09-04",
+        "items": [
+          "Style chaining across Text + Paragraph tabs (F21)",
+          "Arrange Content wire-order block reading (F22)",
+          "insertTable structural footprint in ContentLength (F23)",
+          "Formatted cell content in Data Tree To Table / Fixed Size Table (F24)",
+          "Get Document End Index output"
+        ],
+        "build": "3 targets clean, 0 err / 0 warn, 2026-09-04 19:24",
+        "tests": "80/80 xUnit pass",
+        "icons_approved": false,
+        "gate6_approved": false,
+        "live_verified": false
+      }
+    ]
+  },
+  "flags": {
+    "token_ready": true,
+    "openapi_spec_used": false,
+    "auth_gate_passed": true,
+    "first_component_approved": true,
+    "permissions_confirmed": true
+  }
+}
