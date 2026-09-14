@@ -96,10 +96,43 @@ jobs:
           echo "Restling complete. Packages in dist/:"
           Get-ChildItem dist/
 
+      # Plain "copy into Grasshopper's Components Folder" zips (.gha + DLLs + INSTALL.txt),
+      # the same layout uploaded to Food4Rhino.
+      - name: Build Libraries-folder zips
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $note = @"
+          DocsConnect $ver — Grasshopper plugin for Google Docs
+          https://github.com/eesha-on-jupiter/DocsConnect
+
+          Install
+            1. In Grasshopper: File > Special Folders > Components Folder
+            2. Copy every file from this zip into that folder (keep them together —
+               DocsConnect.gha needs the .dll files beside it)
+            3. If Windows blocked the files: right-click each > Properties > Unblock
+            4. Restart Rhino — the DocsConnect tab appears in Grasshopper
+
+          Rhino 8: the plugin needs the .NET Core runtime (Rhino 8's default).
+          If the tab is missing, run SetDotNetRuntime, choose .NET Core, restart.
+
+          Docs: https://github.com/eesha-on-jupiter/DocsConnect/tree/main/docs
+          "@
+          $targets = @{ "net48" = "rh7-win"; "net7.0-windows" = "rh8-win"; "net7.0" = "rh8-mac" }
+          foreach ($tfm in $targets.Keys) {
+            $stage = "$env:RUNNER_TEMP\zip-$tfm"
+            New-Item -ItemType Directory -Force -Path $stage | Out-Null
+            Get-ChildItem "bin/Release/$tfm" -Include *.gha, *.dll -Recurse -Depth 0 | Copy-Item -Destination $stage
+            Set-Content -Path "$stage\INSTALL.txt" -Value $note -Encoding utf8
+            Compress-Archive -Path "$stage\*" -DestinationPath "dist/DocsConnect-$ver-$($targets[$tfm]).zip" -Force
+          }
+          Get-ChildItem dist/*.zip
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.yak
+          files: |
+            dist/*.zip
+            dist/*.yak
           generate_release_notes: true
           name: "DocsConnect ${{ steps.version.outputs.VERSION }}"
         env:
